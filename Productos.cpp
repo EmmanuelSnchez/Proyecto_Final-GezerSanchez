@@ -3,38 +3,90 @@
 #include <iostream>
 #include <fstream>
 #include <iomanip>
-#include <cstring>
 #include <vector>
+#include <cstring>
 
 #include "productos.h"
+#include "utilidades.h"
 
 using namespace std;
 
 const char* archivoProductos = "productos.dat";
 
-//================ VECTOR PRODUCTOS ================//
+//================ CARGAR PRODUCTOS ================//
 
 vector<Producto> CargarProductos() {
 
-    vector<Producto> lista;
+    vector<Producto> productos;
 
     Producto p;
 
-    ifstream lectura(archivoProductos, ios::binary);
+    ifstream archivo(
+        archivoProductos,
+        ios::binary
+    );
 
-    while(lectura.read((char*)&p, sizeof(Producto))) {
+    if(!archivo) {
+
+        return productos;
+    }
+
+    while(
+        archivo.read(
+        (char*)&p,
+        sizeof(Producto))
+    ) {
 
         if(p.activo) {
-            lista.push_back(p);
+
+            productos.push_back(p);
         }
     }
 
-    lectura.close();
+    archivo.close();
 
-    return lista;
+    return productos;
 }
 
-//================ MENU ================//
+//================ EXISTE PRODUCTO ================//
+
+bool ExisteProducto(int codigo) {
+
+    Producto p;
+
+    ifstream archivo(
+        archivoProductos,
+        ios::binary
+    );
+
+    if(!archivo) {
+
+        return false;
+    }
+
+    while(
+        archivo.read(
+        (char*)&p,
+        sizeof(Producto))
+    ) {
+
+        if(
+            p.codigo == codigo &&
+            p.activo
+        ) {
+
+            archivo.close();
+
+            return true;
+        }
+    }
+
+    archivo.close();
+
+    return false;
+}
+
+//================ MENU PRODUCTOS ================//
 
 void MenuProductos() {
 
@@ -42,7 +94,10 @@ void MenuProductos() {
 
     do {
 
-        cout << "\n====== MODULO PRODUCTOS ======\n";
+        Encabezado(
+        "GESTION DE PRODUCTOS"
+        );
+
         cout << "1. Registrar producto\n";
         cout << "2. Mostrar productos\n";
         cout << "3. Buscar por codigo\n";
@@ -52,9 +107,19 @@ void MenuProductos() {
         cout << "7. Eliminar producto\n";
         cout << "8. Ordenar por precio\n";
         cout << "9. Ordenar por stock\n";
-        cout << "10. Regresar\n";
-        cout << "Seleccione opcion: ";
+        cout << "10. Ordenar por vendidos\n";
+        cout << "11. Regresar\n";
+
+        cout << "\nSeleccione opcion: ";
         cin >> opcion;
+
+        if(cin.fail()) {
+
+            cin.clear();
+            cin.ignore(1000,'\n');
+
+            opcion = 0;
+        }
 
         switch(opcion) {
 
@@ -93,34 +158,16 @@ void MenuProductos() {
             case 9:
                 OrdenarPorStock();
                 break;
+
+            case 10:
+                OrdenarPorVendidos();
+                break;
         }
 
-    } while(opcion != 10);
+    } while(opcion != 11);
 }
 
-//================ VALIDAR PRODUCTO ================//
-
-bool ExisteProducto(int codigo) {
-
-    Producto p;
-
-    ifstream lectura(archivoProductos, ios::binary);
-
-    while(lectura.read((char*)&p, sizeof(Producto))) {
-
-        if(p.codigo == codigo && p.activo) {
-
-            lectura.close();
-            return true;
-        }
-    }
-
-    lectura.close();
-
-    return false;
-}
-
-//================ REGISTRAR ================//
+//================ REGISTRAR PRODUCTO ================//
 
 void RegistrarProducto() {
 
@@ -129,9 +176,18 @@ void RegistrarProducto() {
     cout << "\nCodigo: ";
     cin >> p.codigo;
 
+    if(cin.fail()) {
+
+        cin.clear();
+        cin.ignore(1000,'\n');
+
+        cout << "Codigo invalido.\n";
+        return;
+    }
+
     if(ExisteProducto(p.codigo)) {
 
-        cout << "Codigo existente.\n";
+        cout << "El codigo ya existe.\n";
         return;
     }
 
@@ -143,55 +199,114 @@ void RegistrarProducto() {
     cout << "Precio: ";
     cin >> p.precio;
 
+    if(cin.fail() || p.precio <= 0) {
+
+        cin.clear();
+        cin.ignore(1000,'\n');
+
+        cout << "Precio invalido.\n";
+        return;
+    }
+
     cout << "Stock: ";
     cin >> p.stock;
+
+    if(cin.fail() || p.stock < 0) {
+
+        cin.clear();
+        cin.ignore(1000,'\n');
+
+        cout << "Stock invalido.\n";
+        return;
+    }
 
     p.vendidos = 0;
     p.activo = true;
 
-    ofstream escritura(archivoProductos,
-    ios::binary | ios::app);
+    ofstream archivo(
+        archivoProductos,
+        ios::binary | ios::app
+    );
 
-    escritura.write((char*)&p, sizeof(Producto));
+    if(!archivo) {
 
-    escritura.close();
+        cout << "Error al abrir archivo.\n";
+        return;
+    }
 
-    cout << "Producto registrado.\n";
+    archivo.write(
+        (char*)&p,
+        sizeof(Producto)
+    );
+
+    archivo.close();
+
+    cout << "\nProducto registrado correctamente.\n";
 }
 
 //================ MOSTRAR PRODUCTOS ================//
 
 void MostrarProductos() {
 
-    vector<Producto> productos = CargarProductos();
+    vector<Producto> productos =
+    CargarProductos();
 
-    cout << "\n======= INVENTARIO =======\n";
+    if(productos.empty()) {
 
-    for(int i = 0; i < productos.size(); i++) {
+        cout << "\nNo existen productos registrados.\n";
+        return;
+    }
 
-        cout << "\nCodigo: "
-             << productos[i].codigo << endl;
+    Encabezado("LISTA DE PRODUCTOS");
 
-        cout << "Nombre: "
-             << productos[i].nombre << endl;
+    FormatoDecimal();
 
-        cout << "Precio: Q"
-             << fixed << setprecision(2)
-             << productos[i].precio << endl;
+    cout << left
+         << setw(10) << "Codigo"
+         << setw(25) << "Nombre"
+         << setw(12) << "Precio"
+         << setw(10) << "Stock"
+         << setw(10) << "Vendidos"
+         << endl;
 
-        cout << "Stock: "
-             << productos[i].stock << endl;
+    cout << "-------------------------------------------------------------\n";
 
-        cout << "Vendidos: "
-             << productos[i].vendidos << endl;
+    for(size_t i = 0;
+        i < productos.size();
+        i++) {
+
+        cout << left
+             << setw(10)
+             << productos[i].codigo
+
+             << setw(25)
+             << productos[i].nombre
+
+             << setw(12)
+             << productos[i].precio
+
+             << setw(10)
+             << productos[i].stock
+
+             << setw(10)
+             << productos[i].vendidos
+
+             << endl;
     }
 }
 
-//================ BUSCAR CODIGO ================//
+//================ BUSCAR POR CODIGO ================//
 
 void BuscarPorCodigo() {
 
-    vector<Producto> productos = CargarProductos();
+    vector<Producto> productos =
+    CargarProductos();
+
+    if(productos.empty()) {
+
+        cout << "\nNo existen productos registrados.\n";
+        return;
+    }
 
     int codigo;
     bool encontrado = false;
@@ -199,34 +314,69 @@ void BuscarPorCodigo() {
     cout << "\nIngrese codigo: ";
     cin >> codigo;
 
-    for(int i = 0; i < productos.size(); i++) {
+    if(cin.fail()) {
+
+        cin.clear();
+        cin.ignore(1000,'\n');
+
+        cout << "Codigo invalido.\n";
+        return;
+    }
+
+    for(size_t i = 0;
+        i < productos.size();
+        i++) {
 
         if(productos[i].codigo == codigo) {
 
             encontrado = true;
 
-            cout << "\nProducto encontrado\n";
+            Encabezado("PRODUCTO ENCONTRADO");
+
+            FormatoDecimal();
+
+            cout << "Codigo: "
+                 << productos[i].codigo
+                 << endl;
 
             cout << "Nombre: "
-                 << productos[i].nombre << endl;
+                 << productos[i].nombre
+                 << endl;
 
             cout << "Precio: Q"
-                 << productos[i].precio << endl;
+                 << productos[i].precio
+                 << endl;
+
+            cout << "Stock: "
+                 << productos[i].stock
+                 << endl;
+
+            cout << "Vendidos: "
+                 << productos[i].vendidos
+                 << endl;
 
             break;
         }
     }
 
     if(!encontrado) {
-        cout << "Producto no encontrado.\n";
+
+        cout << "\nProducto no encontrado.\n";
     }
 }
 
-//================ BUSCAR NOMBRE ================//
+//================ BUSCAR POR NOMBRE ================//
 
 void BuscarPorNombre() {
 
-    vector<Producto> productos = CargarProductos();
+    vector<Producto> productos =
+    CargarProductos();
+
+    if(productos.empty()) {
+
+        cout << "\nNo existen productos registrados.\n";
+        return;
+    }
 
     char nombreBuscar[40];
 
@@ -235,26 +385,46 @@ void BuscarPorNombre() {
     cin.ignore();
 
     cout << "\nIngrese nombre: ";
-    cin.getline(nombreBuscar, 40);
+    cin.getline(nombreBuscar,40);
 
-    for(int i = 0; i < productos.size(); i++) {
+    Encabezado("RESULTADOS BUSQUEDA");
 
-        if(strstr(productos[i].nombre, nombreBuscar)) {
+    for(size_t i = 0;
+        i < productos.size();
+        i++) {
+
+        if(
+            strstr(
+                productos[i].nombre,
+                nombreBuscar
+            )
+        ) {
 
             encontrado = true;
 
             cout << "\nCodigo: "
-                 << productos[i].codigo << endl;
+                 << productos[i].codigo
+                 << endl;
 
             cout << "Nombre: "
-                 << productos[i].nombre << endl;
+                 << productos[i].nombre
+                 << endl;
+
+            cout << "Precio: Q"
+                 << productos[i].precio
+                 << endl;
+
+            cout << "Stock: "
+                 << productos[i].stock
+                 << endl;
         }
     }
 
     if(!encontrado) {
-        cout << "No existen coincidencias.\n";
+
+        cout << "\nNo se encontraron coincidencias.\n";
     }
-}
+};
 
 //================ ACTUALIZAR STOCK ================//
 
@@ -265,33 +435,79 @@ void ActualizarStock() {
     int codigo;
     bool encontrado = false;
 
-    cout << "\nCodigo producto: ";
+    cout << "\nCodigo del producto: ";
     cin >> codigo;
 
-    fstream archivo(archivoProductos,
-    ios::binary | ios::in | ios::out);
+    if(cin.fail()) {
 
-    while(archivo.read((char*)&p, sizeof(Producto))) {
+        cin.clear();
+        cin.ignore(1000,'\n');
 
-        if(p.codigo == codigo && p.activo) {
+        cout << "Codigo invalido.\n";
+        return;
+    }
+
+    fstream archivo(
+        archivoProductos,
+        ios::binary |
+        ios::in |
+        ios::out
+    );
+
+    if(!archivo) {
+
+        cout << "Error al abrir archivo.\n";
+        return;
+    }
+
+    while(
+        archivo.read(
+        (char*)&p,
+        sizeof(Producto))
+    ) {
+
+        if(
+            p.codigo == codigo &&
+            p.activo
+        ) {
 
             encontrado = true;
 
             cout << "Stock actual: "
-                 << p.stock << endl;
+                 << p.stock
+                 << endl;
 
             cout << "Nuevo stock: ";
             cin >> p.stock;
 
-            int posicion =
-            archivo.tellg() - sizeof(Producto);
+            if(cin.fail() ||
+               p.stock < 0) {
 
-            archivo.seekp(posicion);
+                cin.clear();
+                cin.ignore(1000,'\n');
 
-            archivo.write((char*)&p,
-            sizeof(Producto));
+                cout << "Stock invalido.\n";
 
-            cout << "Stock actualizado.\n";
+                archivo.close();
+                return;
+            }
+
+            streampos posicion =
+            archivo.tellg();
+
+            archivo.seekp(
+                posicion -
+                static_cast<streamoff>(
+                sizeof(Producto))
+            );
+
+            archivo.write(
+                (char*)&p,
+                sizeof(Producto)
+            );
+
+            cout
+            << "\nStock actualizado correctamente.\n";
 
             break;
         }
@@ -300,7 +516,8 @@ void ActualizarStock() {
     archivo.close();
 
     if(!encontrado) {
-        cout << "Producto no encontrado.\n";
+
+        cout << "\nProducto no encontrado.\n";
     }
 }
 
@@ -311,36 +528,81 @@ void ModificarPrecio() {
     Producto p;
 
     int codigo;
-
     bool encontrado = false;
 
-    cout << "\nCodigo producto: ";
+    cout << "\nCodigo del producto: ";
     cin >> codigo;
 
-    fstream archivo(archivoProductos,
-    ios::binary | ios::in | ios::out);
+    if(cin.fail()) {
 
-    while(archivo.read((char*)&p, sizeof(Producto))) {
+        cin.clear();
+        cin.ignore(1000,'\n');
 
-        if(p.codigo == codigo && p.activo) {
+        cout << "Codigo invalido.\n";
+        return;
+    }
+
+    fstream archivo(
+        archivoProductos,
+        ios::binary |
+        ios::in |
+        ios::out
+    );
+
+    if(!archivo) {
+
+        cout << "Error al abrir archivo.\n";
+        return;
+    }
+
+    while(
+        archivo.read(
+        (char*)&p,
+        sizeof(Producto))
+    ) {
+
+        if(
+            p.codigo == codigo &&
+            p.activo
+        ) {
 
             encontrado = true;
 
             cout << "Precio actual: Q"
-                 << p.precio << endl;
+                 << p.precio
+                 << endl;
 
             cout << "Nuevo precio: ";
             cin >> p.precio;
 
-            int posicion =
-            archivo.tellg() - sizeof(Producto);
+            if(cin.fail() ||
+               p.precio <= 0) {
 
-            archivo.seekp(posicion);
+                cin.clear();
+                cin.ignore(1000,'\n');
 
-            archivo.write((char*)&p,
-            sizeof(Producto));
+                cout << "Precio invalido.\n";
 
-            cout << "Precio actualizado.\n";
+                archivo.close();
+                return;
+            }
+
+            streampos posicion =
+            archivo.tellg();
+
+            archivo.seekp(
+                posicion -
+                static_cast<streamoff>(
+                sizeof(Producto))
+            );
+
+            archivo.write(
+                (char*)&p,
+                sizeof(Producto)
+            );
+
+            cout
+            << "\nPrecio actualizado correctamente.\n";
 
             break;
         }
@@ -349,7 +611,8 @@ void ModificarPrecio() {
     archivo.close();
 
     if(!encontrado) {
-        cout << "Producto no encontrado.\n";
+
+        cout << "\nProducto no encontrado.\n";
     }
 }
 
@@ -360,32 +623,64 @@ void EliminarProducto() {
     Producto p;
 
     int codigo;
-
     bool encontrado = false;
 
-    cout << "\nCodigo producto: ";
+    cout << "\nCodigo del producto: ";
     cin >> codigo;
 
-    fstream archivo(archivoProductos,
-    ios::binary | ios::in | ios::out);
+    if(cin.fail()) {
 
-    while(archivo.read((char*)&p, sizeof(Producto))) {
+        cin.clear();
+        cin.ignore(1000,'\n');
 
-        if(p.codigo == codigo && p.activo) {
+        cout << "Codigo invalido.\n";
+        return;
+    }
+
+    fstream archivo(
+        archivoProductos,
+        ios::binary |
+        ios::in |
+        ios::out
+    );
+
+    if(!archivo) {
+
+        cout << "Error al abrir archivo.\n";
+        return;
+    }
+
+    while(
+        archivo.read(
+        (char*)&p,
+        sizeof(Producto))
+    ) {
+
+        if(
+            p.codigo == codigo &&
+            p.activo
+        ) {
 
             encontrado = true;
 
             p.activo = false;
 
-            int posicion =
-            archivo.tellg() - sizeof(Producto);
+            streampos posicion =
+            archivo.tellg();
 
-            archivo.seekp(posicion);
+            archivo.seekp(
+                posicion -
+                static_cast<streamoff>(
+                sizeof(Producto))
+            );
 
-            archivo.write((char*)&p,
-            sizeof(Producto));
+            archivo.write(
+                (char*)&p,
+                sizeof(Producto)
+            );
 
-            cout << "Producto eliminado.\n";
+            cout
+            << "\nProducto eliminado correctamente.\n";
 
             break;
         }
@@ -394,78 +689,187 @@ void EliminarProducto() {
     archivo.close();
 
     if(!encontrado) {
-        cout << "Producto no encontrado.\n";
+
+        cout << "\nProducto no encontrado.\n";
     }
 }
 
-//================ ORDENAR PRECIO ================//
+//================ ORDENAR POR PRECIO =================//
 
 void OrdenarPorPrecio() {
 
-    vector<Producto> productos = CargarProductos();
+    vector<Producto> productos =
+    CargarProductos();
 
-    for(int i = 0; i < productos.size() - 1; i++) {
+    if(productos.empty()) {
 
-        for(int j = 0;
+        cout << "\nNo existen productos registrados.\n";
+        return;
+    }
+
+    // Bubble Sort Ascendente
+
+    for(size_t i = 0;
+        i < productos.size() - 1;
+        i++) {
+
+        for(size_t j = 0;
             j < productos.size() - 1 - i;
             j++) {
 
-            if(productos[j].precio >
-               productos[j + 1].precio) {
+            if(
+                productos[j].precio >
+                productos[j + 1].precio
+            ) {
 
-                Producto aux = productos[j];
+                Producto aux =
+                productos[j];
 
-                productos[j] = productos[j + 1];
+                productos[j] =
+                productos[j + 1];
 
-                productos[j + 1] = aux;
+                productos[j + 1] =
+                aux;
             }
         }
     }
 
-    cout << "\n=== PRODUCTOS ORDENADOS PRECIO ===\n";
+    Encabezado(
+    "PRODUCTOS ORDENADOS POR PRECIO"
+    );
 
-    for(int i = 0; i < productos.size(); i++) {
+    FormatoDecimal();
 
-        cout << productos[i].nombre
-             << " | Q"
-             << productos[i].precio << endl;
+    for(size_t i = 0;
+        i < productos.size();
+        i++) {
+
+        cout
+        << productos[i].codigo
+        << " | "
+        << productos[i].nombre
+        << " | Q"
+        << productos[i].precio
+        << endl;
     }
 }
 
-//================ ORDENAR STOCK ================//
+//================ ORDENAR POR STOCK =================//
 
 void OrdenarPorStock() {
 
-    vector<Producto> productos = CargarProductos();
+    vector<Producto> productos =
+    CargarProductos();
 
-    for(int i = 0; i < productos.size() - 1; i++) {
+    if(productos.empty()) {
 
-        int menor = i;
+        cout << "\nNo existen productos registrados.\n";
+        return;
+    }
 
-        for(int j = i + 1;
+    // Selection Sort
+
+    for(size_t i = 0;
+        i < productos.size() - 1;
+        i++) {
+
+        size_t menor = i;
+
+        for(size_t j = i + 1;
             j < productos.size();
             j++) {
 
-            if(productos[j].stock <
-               productos[menor].stock) {
+            if(
+                productos[j].stock <
+                productos[menor].stock
+            ) {
 
                 menor = j;
             }
         }
 
-        Producto aux = productos[i];
+        Producto aux =
+        productos[i];
 
-        productos[i] = productos[menor];
+        productos[i] =
+        productos[menor];
 
-        productos[menor] = aux;
+        productos[menor] =
+        aux;
     }
 
-    cout << "\n=== PRODUCTOS ORDENADOS STOCK ===\n";
+    Encabezado(
+    "PRODUCTOS ORDENADOS POR STOCK"
+    );
 
-    for(int i = 0; i < productos.size(); i++) {
+    for(size_t i = 0;
+        i < productos.size();
+        i++) {
 
-        cout << productos[i].nombre
-             << " | Stock: "
-             << productos[i].stock << endl;
+        cout
+        << productos[i].codigo
+        << " | "
+        << productos[i].nombre
+        << " | Stock: "
+        << productos[i].stock
+        << endl;
+    }
+}
+
+//================ ORDENAR POR VENDIDOS =================//
+
+void OrdenarPorVendidos() {
+
+    vector<Producto> productos =
+    CargarProductos();
+
+    if(productos.empty()) {
+
+        cout << "\nNo existen productos registrados.\n";
+        return;
+    }
+
+    // Bubble Sort Descendente
+
+    for(size_t i = 0;
+        i < productos.size() - 1;
+        i++) {
+
+        for(size_t j = 0;
+            j < productos.size() - 1 - i;
+            j++) {
+
+            if(
+                productos[j].vendidos <
+                productos[j + 1].vendidos
+            ) {
+
+                Producto aux =
+                productos[j];
+
+                productos[j] =
+                productos[j + 1];
+
+                productos[j + 1] =
+                aux;
+            }
+        }
+    }
+
+    Encabezado(
+    "PRODUCTOS MAS VENDIDOS"
+    );
+
+    for(size_t i = 0;
+        i < productos.size();
+        i++) {
+
+        cout
+        << productos[i].codigo
+        << " | "
+        << productos[i].nombre
+        << " | Vendidos: "
+        << productos[i].vendidos
+        << endl;
     }
 }

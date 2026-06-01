@@ -7,6 +7,8 @@
 
 using namespace std;
 
+//================ ESTRUCTURA PRODUCTO ================//
+
 struct Producto {
 
     int codigo;
@@ -17,19 +19,30 @@ struct Producto {
     bool activo;
 };
 
+//================ MENU ================//
+
 void MenuProductos();
+
+//================ CRUD ================//
 
 void RegistrarProducto();
 void MostrarProductos();
+
 void BuscarPorCodigo();
 void BuscarPorNombre();
 
 void ActualizarStock();
 void ModificarPrecio();
+
 void EliminarProducto();
 
-void OrdenarPorPrecio();
-void OrdenarPorStock();
+//================ ORDENAMIENTOS ================//
+
+void OrdenarPorPrecio();      // Bubble Sort
+void OrdenarPorStock();       // Selection Sort
+void OrdenarPorVendidos();    // Bubble Sort
+
+//================ UTILIDADES ================//
 
 bool ExisteProducto(int codigo);
 

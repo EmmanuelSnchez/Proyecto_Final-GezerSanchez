@@ -1,0 +1,5 @@
+Proyecto Final
+
+Este proyecto consiste en un sistema de consola desarrollado en C++ que permite administrar productos, realizar ventas y generar reportes utilizando archivos binarios para almacenar la información de manera permanente.
+
+El sistema fue desarrollado aplicando programación estructurada, modularización mediante archivos .h y .cpp, uso de estructuras (struct), vectores, archivos binarios, algoritmos de búsqueda y ordenamiento.

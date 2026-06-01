@@ -7,10 +7,22 @@
 
 using namespace std;
 
-//================ PROTOTIPOS ================//
+//================ FORMATO =================//
 
 void Encabezado(string titulo);
 
 void FormatoDecimal();
+
+//================ SISTEMA =================//
+
+void PausarSistema();
+
+void LimpiarPantalla();
+
+//================ UTILIDADES =================//
+
+void MenuUtilidades();
+
+void ReiniciarInventario();
 
 #endif

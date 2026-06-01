@@ -1,0 +1,1 @@
+Este proyecto consiste en un sistema de consola desarrollado en C++ que permite administrar productos, realizar ventas y generar reportes utilizando archivos binarios para almacenar la información de manera permanente.
